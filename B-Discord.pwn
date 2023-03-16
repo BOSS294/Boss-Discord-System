@@ -1,6 +1,6 @@
 /*
 OFFICALLY SCRIPTED BY @BO$$
-VERSION - 1.2
+VERSION - 1.3
 The include BCMD used is not created by me. I found it on internet.
 It was full of errors and bugs.
 I fixed it and converted it into BCMD
@@ -37,13 +37,13 @@ I fixed it and converted it into BCMD
 #include <BCMD1>
 
 
-#define serverconnect       "936664000186421328"
-#define playerconnect       "936664020000333834"
-#define playerdisconnect    "936664071120502814"
-#define commandlogs         "936664134584504360"
-#define playerchat          "936664166545121421"
-#define adminchannel        "936664182911291432"
-#define securitychannel     "936664235239415848"
+#define serverconnect       "1075456522500460704"
+#define playerconnect       "1075456522500460704"
+#define playerdisconnect    "1075456522500460704"
+#define commandlogs         "1075456522500460704"
+#define playerchat          "1075456522500460704"
+#define adminchannel        "1075456522500460704"
+#define securitychannel     "1075456522500460704"
 
 new stock                                   //
                                            /////////////////////////////////////////////
@@ -58,15 +58,10 @@ new stock                                   //
                                   //
 
 ;
-/*
-new DCC_Channel:Server_Connect; // Server connection
-new DCC_Channel:Player_Connect; // Player connection
-new DCC_Channel:Player_Disconnect; //Player disconnection
-new DCC_Channel:Command_Logs; //Command Logs
-new DCC_Channel:Player_Chat; //Player chats
-new DCC_Channel:Admin_Channel; //Admins Channel
-new DCC_Channel:Security_Channel; // Security Channel
-*/
+
+
+forward DiscordSendLog(playerid,command[]);
+forward DiscordSendLogTarget(playerid,command[],target);
 stock DCC_SendChannelMessageFormatted( DCC_Channel: channel, const format[ ]) 
 {
     #pragma unused channel
@@ -80,6 +75,7 @@ stock PlayerName(playerid)
   return name;
 }
 #define MAX_CLIENT_MSG_LENGTH 144
+
 public OnFilterScriptInit()
 {	
     Server_Connect = DCC_FindChannelById( serverconnect );
@@ -96,6 +92,7 @@ public OnFilterScriptInit()
 
     Security_Channel = DCC_FindChannelById( securitychannel );
 	
+
 	new string[128],string2[128];
 	format(string,sizeof (string),"Server successfully started");
 	DCC_SendChannelMessage(Server_Connect,string);
@@ -119,7 +116,6 @@ public BotStatus(playerid)
             {
                 if ( IsPlayerConnected( i ) ) 
                 {
-                    //format( szBigString, sizeof( szBigString ), "%s%s (ID: %d)\n", szBigString, PlayerName( i ), i );
                     count++;
 
                 }
@@ -143,35 +139,33 @@ public BotStatus(playerid)
         DCC_SetBotActivity(szBigString);
         DCC_SetBotPresenceStatus(DCC_BotPresenceStatus:DO_NOT_DISTURB);
     }
-
-    /*
-    format( szBigString, sizeof( szBigString ), "There are %d player(s) online.", count );
-    DCC_SetBotActivity(szBigString);
-    DCC_SetBotPresenceStatus(DCC_BotPresenceStatus:IDLE);
-    */
 }
 
 public OnPlayerConnect(playerid)
 {
-	new name1[MAX_PLAYER_NAME];
-	new pip[16],client1[24];
-	GetPlayerIp(playerid, pip, sizeof(pip));
-	GetPlayerName(playerid, name1, sizeof(name1));
+    
+    new pip[100],client1[24];
+    GetPlayerIp(playerid, pip, sizeof(pip));
     GetPlayerVersion(playerid, client1, sizeof(client1));
-	new string[250],string2[250];
-	format(string,sizeof (string),":white_check_mark: **%s Joined the server**",name1);
-	DCC_SendChannelMessage(Player_Connect,string);
-   
-    format(string2,sizeof (string2),"**[Security System] {Player-Connected}\nPlayer Name -** `%s`\n**Player id -** `%d`\n**Player ip -** `%s`\n**Client Version -** `V%s` ",name1,playerid,pip,client1);
-    DCC_SendChannelMessage(Security_Channel,string2);
+    new string[250];
+    format(string,sizeof (string),":white_check_mark: **%s Joined the server**",PlayerName(playerid));
+    DCC_SendChannelMessage(Player_Connect,string);
+    new str[2048],str2[100], footer[1024];
+    format(str, sizeof(str), "Player Commands");
+    format(str2,sizeof (str2),"[Security System] {Player-Connected}\nPlayer Name - `%s`\nPlayer id - `%d`\nPlayer ip - `%s`\n**Client Version - `V%s` ",PlayerName(playerid),playerid,pip,client1);
+    new DCC_Embed:embed = DCC_CreateEmbed(str, str2);
+    DCC_SetEmbedColor(embed, 0xFF0000);
+    format(footer, sizeof(footer), "Note: This is for security purpose only.");
+    DCC_SetEmbedFooter(embed, footer);
+    DCC_SendChannelEmbedMessage(Security_Channel, embed);
 	return 1;
 }
+
 public OnPlayerDisconnect(playerid, reason)
 {
-    new name1[MAX_PLAYER_NAME];
-    GetPlayerName(playerid, name1, sizeof(name1));
+
     new string[250];
-    format(string,sizeof (string),":no_entry: **%s left the server**",name1);
+    format(string,sizeof (string),":no_entry: **%s left the server**",PlayerName(playerid));
     DCC_SendChannelMessage(Player_Disconnect,string);
 	return 1;
 }
@@ -199,27 +193,26 @@ public DCC_OnMessageCreate(DCC_Message:message)
 */
 public OnPlayerText(playerid, text[])
 {
-	new name[MAX_PLAYER_NAME + 1];
-    GetPlayerName(playerid, name, sizeof(name));
+
     new msg[128];
-    format(msg, sizeof(msg), "```%s(%d): %s```", name, playerid, text);
+    format(msg, sizeof(msg), "```%s(%d): %s```", PlayerName(playerid), playerid, text);
     DCC_SendChannelMessage(Player_Chat, msg);
     return 1;
   
 }
 public OnRconLoginAttempt(ip[], password[], success)
 {
+    new playerid;
     if(!success)
     {
-        new msg[250],name[MAX_PLAYER_NAME],playerid;
-        GetPlayerName(playerid,name,sizeof(name));
-        format(msg, sizeof(msg),"**[Security System]**`%s` **attempted a rcon login with password** `%s` **and failed, Ban him quickly if it's not you or your friend**", name,password);
+        new msg[250];
+        format(msg, sizeof(msg),"**[Security System]**`%s` **attempted a rcon login with password** `%s` **and failed, Ban him quickly if it's not you or your friend**", PlayerName(playerid),password);
         DCC_SendChannelMessage(Security_Channel,msg);
     }
     if(success == 1)
     {
-        new msg[128],name[MAX_PLAYER_NAME];
-        format(msg, sizeof(msg),"[Security System]%s successfully logged into rcon\n Use /ban <name> to ban him if it's not you", name);
+        new msg[128];
+        format(msg, sizeof(msg),"[Security System]%s successfully logged into rcon\n Use /ban <name> to ban him if it's not you", PlayerName(playerid));
         DCC_SendChannelMessage(Security_Channel,msg);
     }
     return 1;
@@ -248,35 +241,56 @@ public OnDiscordCommandPerformed(DCC_User:user, DCC_Channel:channel, cmdtext[], 
 }
 BCMD:info(user, channel, params[]) 
 {
-		DCC_SendChannelMessage(channel, "> **__IP - YOUR SERVER IP__**\n> **__Gamemode - YOUR GAMEMODE__** \n> **__Server Slot - SERVESLOT__** \n> **__Language - SERVERLANGUAGE__** \n> **Forums - FORUMS ** \n> **" );
-		return 1;
+        new str[2048], footer[1024];
+        format(str, sizeof(str), "Server Information.");
+        new DCC_Embed:embed = DCC_CreateEmbed(str, "IP - Coming SOON\nGamemode - YOUR GAMEMODE \nServer Slot - SERVESLOT \nLanguage - SERVERLANGUAGE \nForums - FORUMS ");
+        DCC_SetEmbedColor(embed, 0xFF0000);
+        format(footer, sizeof(footer), "Note: ADD YOUR NOTE HERE.");
+        DCC_SetEmbedFooter(embed, footer);
+        return DCC_SendChannelEmbedMessage(channel, embed);
+    
 }
 BCMD:cmds(user, channel, params[]) 
 {
-    DCC_SendChannelMessage(channel, "```[Player Commands]\n!info --> Shows server info\n!players --> Shows all the online players\n!say{text} --> Your text message will be sended in-game\n!credits --> shows the credits```" );
-    return 1;
+        new str[2048], footer[1024];
+        format(str, sizeof(str), "Player Commands");
+        new DCC_Embed:embed = DCC_CreateEmbed(str, "!info \n!players \n!say{text} \n!credits \n !admins \n!helpers \n !testers ");
+        DCC_SetEmbedColor(embed, 0xFF0000);
+        format(footer, sizeof(footer), "Note: Different level required for different command use.");
+        DCC_SetEmbedFooter(embed, footer);
+        return DCC_SendChannelEmbedMessage(channel, embed);
+   
 }
-stock Bosslogs(playerid, command[])
+
+public DiscordSendLog(playerid,command[])
 {
-  new name1[MAX_PLAYER_NAME];
-  GetPlayerName(playerid, name1, sizeof(name1));
-  new string[128];
-  format(string, sizeof string, "[ADM.CMD] Administrator %s[%i] has used /%s", name1, playerid, command);
-  DCC_SendChannelMessage(Command_Logs, string);
+  new loggertext[128];
+  format(loggertext,sizeof(loggertext),"```%s(%i) Used %s command.```",PlayerName(playerid),playerid,command);
+  return DCC_SendChannelMessage(Command_Logs, loggertext);
+}
+public DiscordSendLogTarget(playerid,command[],target)
+{
+  new loggertext[128];
+  format(loggertext,sizeof(loggertext),"```%s(%i) Used %s command on %s(%i).```",PlayerName(playerid),playerid,command,PlayerName(target),target);
+  DCC_SendChannelMessage(Command_Logs, loggertext);
 }
 BCMD:acmds(user, channel, params[]) 
 {
     if (channel == Admin_Channel) 
     {
-       DCC_SendChannelMessage(Admin_Channel, "```[Admin Commands]\n!announce -->announce whatever you want \n!getstats [id] --> Sends player stats\n!aclear --> Clearing in game chat\n!aslap[id] --> slapping player\n!kick[id] --> kicks player\n!freeze[id] -->freeze any player\n!unfreeze[id] --> This command will unfreeze any player ingame\n!ban[id] --> You can ban player using this command\n!restart --> Restarts the server```\n");
-       DCC_SendChannelMessage(Admin_Channel,"```!time --> Sends u the ingame time\n!giveallcash [amount] --> Gives all players money\n!giveallscore --> Gives all players score\n!healall --> Heals all the players\n!armourall --> armours all the players\n!explode [id] --> explodes the targeted player\n```");
-       return 1;
+        new str[2048], footer[1024];
+        format(str, sizeof(str), "Discord Admin Commands.");
+        new DCC_Embed:embed = DCC_CreateEmbed(str, "\n!getstats [id]\n!aclear \n!aslap[id]\n!kick[id] \n!freeze[id] \n!unfreeze[id] \n!ban[id] \n!restart  \n !time \n!giveallcash [amount]\n!giveallscore\n!healall \n!armourall\n!explode [id] " );
+        format(footer, sizeof(footer), "Note: Different level required for different command use.");
+        DCC_SetEmbedFooter(embed, footer);
+        return DCC_SendChannelEmbedMessage(channel, embed);
     }
-    else
-        DCC_SendChannelMessage(channel, ":no_entry_sign: **[ERROR] You can use this command only in Admin or Security Channel!**");
+
+    else DCC_SendChannelMessage(channel, "[ERROR] You don't have an appropriate role to use this command." );
     
     return 1;
 }
+
 
 BCMD:players(user, channel, params[]) 
 {
@@ -343,9 +357,8 @@ BCMD:freeze(user, channel, params[])
     {
         if(IsPlayerConnected(playerid))
         {
-            new msg[128], pname[MAX_PLAYER_NAME];
-            GetPlayerName(playerid, pname, sizeof(pname));
-            format(msg, sizeof(msg), "**[FREEZE] You have frozzed** ``%s.``", pname);
+            new msg[128];
+            format(msg, sizeof(msg), "**[FREEZE] You have frozzed** ``%s.``", PlayerName(playerid));
             DCC_SendChannelMessage(Admin_Channel, msg);
             format(msg, sizeof(msg), "{FF0000}You {00CCCC}had been frozen by {247A46}Discord Administrator.");
             SendClientMessage2(playerid, 0xFF0000C8, msg);
@@ -371,9 +384,8 @@ BCMD:unfreeze(user, channel, params[])
 
         if(IsPlayerConnected(playerid))
         {
-            new msg[128], pname[MAX_PLAYER_NAME];
-            GetPlayerName(playerid, pname, sizeof(pname));
-            format(msg, sizeof(msg), "```[UNFREEZE]You  unfrozed  %s.```", pname);
+            new msg[128];
+            format(msg, sizeof(msg), "```[UNFREEZE]You  unfrozed  %s.```", PlayerName(playerid));
             DCC_SendChannelMessage(Admin_Channel, msg);
             format(msg, sizeof(msg), "{FF0000}You {00CCCC}had been unfrozen by {247A46}Discord Administrator.");
             SendClientMessage2(playerid, 0xFF0000C8, msg);
@@ -392,13 +404,12 @@ BCMD:kick(user, channel, params[])
     new targetid;
     if(IsPlayerConnected(targetid))
     {
-        new gname[MAX_PLAYER_NAME],string[125],string2[125];
+        new string[125],string2[125];
         if(sscanf(params,"u",targetid)) return DCC_SendChannelMessage(channel,"**[USAGE]:/kick [playerid]**");
         if(targetid == INVALID_PLAYER_ID || !IsPlayerConnected(targetid)) return DCC_SendChannelMessage(channel," [ERROR] : The id you have typed is invalid!");
-        GetPlayerName(targetid,gname,sizeof(gname));
-        format(string, sizeof(string), "SERVER:{FF0000} %s {00CCCC}has been kicked from the server by {247A46}Discord Administrator.", gname);
+        format(string, sizeof(string), "SERVER:{FF0000} %s {00CCCC}has been kicked from the server by {247A46}Discord Administrator.", PlayerName(targetid));
         SendClientMessageToAll(COLOR_RED, string);
-        format(string2, sizeof(string2), "```SERVER: You kicked %s.```", gname);
+        format(string2, sizeof(string2), "```SERVER: You kicked %s.```", PlayerName(targetid));
         DCC_SendChannelMessage(Admin_Channel, string2);
         Kick(targetid);
         return 1;
@@ -408,15 +419,14 @@ BCMD:kick(user, channel, params[])
 }
 BCMD:aslap(user, channel, params[])
 {
-    new id, str2[128], pname[MAX_PLAYER_NAME], Float:x, Float:y, Float:z;
+    new id, str2[128], Float:x, Float:y, Float:z;
     if (channel == Admin_Channel) 
     {
       if(sscanf(params, "u", id)) return DCC_SendChannelMessage(Admin_Channel, "**Usage: !aslap [ID]**");
       if(id == INVALID_PLAYER_ID || !IsPlayerConnected(id)) return  DCC_SendChannelMessage(channel," [ERROR] : The id you have typed is invalid!");
-      GetPlayerName(id, pname, sizeof(pname));
       format(str2, sizeof(str2), "{FF0000}You {00CCCC} have been Slapped By {247A46}Discord Administrator.");
       SendClientMessageToAll(0x0000FFFF, str2);
-      format(str2, sizeof(str2), "**[SLAP] You have slapped %s.**", pname);
+      format(str2, sizeof(str2), "**[SLAP] You have slapped %s.**", PlayerName(id));
       DCC_SendChannelMessage(Admin_Channel, str2);
       GetPlayerPos(id, x, y, z);
       SetPlayerPos(id, x, y, z+10);
@@ -453,16 +463,15 @@ BCMD:getstats(user, channel, params[])
         if(IsPlayerConnected(targetid))
         {
 
-                new msg[600], name[MAX_PLAYER_NAME], pIP[128], Float:health, Float:armour;
+                new msg[600],  pIP[128], Float:health, Float:armour;
                 if(sscanf(params, "u",  targetid)) return DCC_SendChannelMessage(Admin_Channel, "**Usage: !getstats [ID]**");
                 if(targetid == INVALID_PLAYER_ID || !IsPlayerConnected(targetid)) return DCC_SendChannelMessage(channel," [ERROR] : The id you have typed is invalid!");
-                GetPlayerName(targetid, name, sizeof(name));
                 GetPlayerIp(targetid, pIP, 128);
                 GetPlayerHealth(targetid, health);
                 GetPlayerArmour(targetid, armour);
                 new ping;
                 ping = GetPlayerPing(targetid);
-                format(msg, sizeof(msg), "``%s``'s info: **PLAYER-IP**: ``%s`` | **PLAYER-Health**: ``%d`` | **PLAYER-Armour**: ``%d`` | **PLAYER-Ping**: ``%i``", name, pIP, floatround(health), floatround(armour), ping);
+                format(msg, sizeof(msg), "``%s``'s info: **PLAYER-IP**: ``%s`` | **PLAYER-Health**: ``%d`` | **PLAYER-Armour**: ``%d`` | **PLAYER-Ping**: ``%i``", PlayerName(targetid), pIP, floatround(health), floatround(armour), ping);
                 DCC_SendChannelMessage(Admin_Channel, msg);
                 return 1;
         }
@@ -483,16 +492,15 @@ BCMD:announce(user, channel, params[])
 }
 BCMD:ban(user, channel , params[])
 {
-    new msg[128],msg2[128],name1[MAX_PLAYER_NAME],targetid;
+    new msg[128],msg2[128],targetid;
     if(channel == Admin_Channel|| Security_Channel)
     {
         if(IsPlayerConnected(targetid))
         {
             if(sscanf(params, "u", targetid)) return DCC_SendChannelMessage(Admin_Channel, "**Usage: !ban [ID]**");
-            GetPlayerName(targetid, name1, sizeof(name1));
-            format(msg, sizeof(msg),"{247A46}Discord Administrator has banned {00CCCC}%s.", name1);
+            format(msg, sizeof(msg),"{247A46}Discord Administrator has banned {00CCCC}%s.", PlayerName(targetid));
             SendClientMessageToAll(COLOR_RED,msg);
-            format(msg2, sizeof(msg2),"```[Discord Security] You have banned %s.```", name1);
+            format(msg2, sizeof(msg2),"```[Discord Security] You have banned %s.```", PlayerName(targetid));
             DCC_SendChannelMessage(channel,msg2);
             Ban(targetid);
             return 1;
