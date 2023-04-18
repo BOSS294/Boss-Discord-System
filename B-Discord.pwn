@@ -1,6 +1,6 @@
 /*
 OFFICALLY SCRIPTED BY @BO$$
-VERSION - 1.3
+VERSION - 1.4
 The include BCMD used is not created by me. I found it on internet.
 It was full of errors and bugs.
 I fixed it and converted it into BCMD
@@ -36,29 +36,57 @@ I fixed it and converted it into BCMD
 #include <sscanf>
 #include <BCMD1>
 
+#define DIALOG_BUGSUGGEST 1234
 
-#define serverconnect       "1075456522500460704"
-#define playerconnect       "1075456522500460704"
-#define playerdisconnect    "1075456522500460704"
-#define commandlogs         "1075456522500460704"
-#define playerchat          "1075456522500460704"
-#define adminchannel        "1075456522500460704"
-#define securitychannel     "1075456522500460704"
+#define serverconnect       "1096630668894687254"
+#define playerconnect       "1096630668894687254"
+#define playerdisconnect    "1096630668894687254"
+#define commandlogs         "1096630668894687254"
+#define playerchat          "1096630668894687254"
+#define adminchannel        "1096630668894687254"
+#define securitychannel     "1096630668894687254"
+#define bugsuggestchannel   "1096630668894687254"
+#define randommsgchannel    "1096630668894687254"
+#define cordchannel         "1096630668894687254"
 
 new stock                                   //
                                            /////////////////////////////////////////////
-     DCC_Channel:Server_Connect,          // Server connection   //
-     DCC_Channel:Player_Connect,         // Player connection   /////////////////////////////////
-     DCC_Channel:Player_Disconnect,     //Player disconnection //
-     DCC_Channel:Command_Logs,         //Command Logs         ////////////////////////
-     DCC_Channel:Player_Chat,         //Player chats         //
-     DCC_Channel:Admin_Channel,      //Admins Channel       ///////////////////////////////////
-     DCC_Channel:Security_Channel   // Security Channel    //
-                                   /////////////////////////////////////////////////
-                                  //
+     DCC_Channel:Server_Connect,          // Server connection         //
+     DCC_Channel:Player_Connect,         // Player connection         /////////////////////////////////
+     DCC_Channel:Player_Disconnect,     //Player disconnection       //
+     DCC_Channel:Command_Logs,         //Command Logs               ////////////////////////
+     DCC_Channel:Player_Chat,         //Player chats               //
+     DCC_Channel:Admin_Channel,      //Admins Channel             ///////////////////////////////////
+     DCC_Channel:Security_Channel,  // Security Channel          //
+     DCC_Channel:BS_Channel,       // bug/suggestion Channel    ///////////////////////////
+     DCC_Channel:RM_Channel,      // random message Channel    //
+     DCC_Channel:Cord_Channel    // cord saving    Channel    //
+                                 /////////////////////////////////////////////////
+                                //
 
 ;
+#define  MAX_QUOTES  5
+#define  MAX_MESSAGES 5
 
+ new RandomMSG[][] =
+{
+    "Hello there!",
+    "How are you doing?",
+    "Welcome to our server!",
+    "Thanks for playing!",
+    "Have a great day!"
+};
+
+new const quotes[MAX_QUOTES][128] = {
+    "```The only way to do great work is to love what you do. - Steve Jobs```",
+    "```Success is not final, failure is not fatal: It is the courage to continue that counts. - Winston Churchill```",
+    "```Believe you can and you're halfway there. - Theodore Roosevelt```",
+    "```I have not failed. I've just found 10,000 ways that won't work. - Thomas A. Edison```",
+    "```If you want to live a happy life, tie it to a goal, not to people or things. - Albert Einstein```"
+};
+new random_message_timer;
+
+new bugreport[MAX_PLAYERS];
 
 forward DiscordSendLog(playerid,command[]);
 forward DiscordSendLogTarget(playerid,command[],target);
@@ -68,16 +96,27 @@ stock DCC_SendChannelMessageFormatted( DCC_Channel: channel, const format[ ])
     #pragma unused format
     return 1;
 }
+
+
 stock PlayerName(playerid)
 {
   new name[MAX_PLAYER_NAME];
   GetPlayerName(playerid, name, MAX_PLAYER_NAME);
   return name;
 }
+forward SendMSG();
+
+public SendMSG()
+{
+    new randMSG = random(sizeof(RandomMSG));
+    DCC_SendChannelMessage(RM_Channel,RandomMSG[randMSG]);
+
+}
 #define MAX_CLIENT_MSG_LENGTH 144
 
 public OnFilterScriptInit()
 {	
+    new string[128],string2[128];
     Server_Connect = DCC_FindChannelById( serverconnect );
 
     Player_Connect = DCC_FindChannelById( playerconnect );
@@ -92,17 +131,35 @@ public OnFilterScriptInit()
 
     Security_Channel = DCC_FindChannelById( securitychannel );
 	
+    BS_Channel = DCC_FindChannelById( bugsuggestchannel );
 
-	new string[128],string2[128];
+    Cord_Channel = DCC_FindChannelById( cordchannel );
+
+    RM_Channel = DCC_FindChannelById( randommsgchannel );
+
+
+
+    print("=======================================");
+    print("|                                     |");
+    print("|        B-Discord version 1.4        |");
+    print("|        By Bo$$                      |");
+    print("|                                     |");
+    print("=======================================");
+    SetTimer("SendMSG", 60000, true);
 	format(string,sizeof (string),"Server successfully started");
 	DCC_SendChannelMessage(Server_Connect,string);
 	SetTimer("BotStatus", 1000, true);
     format(string2,sizeof (string2),"**Bo$$ Security System is in action** :sunglasses:");
     DCC_SendChannelMessage(Security_Channel,string2);
+    
 	return 1;
 
 }
-
+public OnFilterScriptExit()
+{
+        KillTimer(random_message_timer);
+        return 1;
+}
 forward BotStatus(playerid);
 public BotStatus(playerid)
 {
@@ -123,7 +180,7 @@ public BotStatus(playerid)
         }
     if(count == 0)
     {
-        format( szBigString, sizeof( szBigString ), "There is no one online.", count );
+        format( szBigString, sizeof( szBigString ), "Getting bored ?? Join me at <serverip>", count );
         DCC_SetBotActivity(szBigString);
         DCC_SetBotPresenceStatus(DCC_BotPresenceStatus:ONLINE);
     }
@@ -147,17 +204,20 @@ public OnPlayerConnect(playerid)
     new pip[100],client1[24];
     GetPlayerIp(playerid, pip, sizeof(pip));
     GetPlayerVersion(playerid, client1, sizeof(client1));
+    bugreport[playerid] = 0;
     new string[250];
+
     format(string,sizeof (string),":white_check_mark: **%s Joined the server**",PlayerName(playerid));
     DCC_SendChannelMessage(Player_Connect,string);
-    new str[2048],str2[100], footer[1024];
-    format(str, sizeof(str), "Player Commands");
-    format(str2,sizeof (str2),"[Security System] {Player-Connected}\nPlayer Name - `%s`\nPlayer id - `%d`\nPlayer ip - `%s`\n**Client Version - `V%s` ",PlayerName(playerid),playerid,pip,client1);
+    new str[2048],str2[500], footer[1024];
+    format(str, sizeof(str), "Player Connection");
+    format(str2,sizeof (str2),"[Security System] {Player-Connected}\nPlayer Name - `%s`\nPlayer id - `%d`\nPlayer ip - `%s`\nClient Version - `V%s` ",PlayerName(playerid),playerid,pip,client1);
     new DCC_Embed:embed = DCC_CreateEmbed(str, str2);
     DCC_SetEmbedColor(embed, 0xFF0000);
     format(footer, sizeof(footer), "Note: This is for security purpose only.");
     DCC_SetEmbedFooter(embed, footer);
     DCC_SendChannelEmbedMessage(Security_Channel, embed);
+    SendClientMessage(playerid, COLOR_RED, "This server used B-Discord filterscript by Bo$$");
 	return 1;
 }
 
@@ -222,6 +282,43 @@ public OnRconCommand(cmd[])
 
     return 1;
 }
+public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
+{
+    switch(dialogid)
+    {
+        case DIALOG_BUGSUGGEST:
+                    {
+                        if(!response)
+                        {
+                            return 1;
+
+                        }
+                        if(response)
+                        {
+
+                                if(bugreport[playerid] == 1)
+                                {
+                                    new string[1000];
+                                    bugreport[playerid] = 0;
+                                    format(string, sizeof(string), "```Bug reported by  %s(%i) : %s```",PlayerName(playerid),playerid,inputtext);
+                                    DCC_SendChannelMessage(BS_Channel,string);
+                                    SendClientMessage(playerid, COLOR_ORANGE, "Bug reported successfully.");
+                                }
+                                else
+                                {
+                                    new string[1000];
+                                    format(string, sizeof(string), "```New suggestion by  %s(%i) : %s```",PlayerName(playerid),playerid,inputtext);
+                                    DCC_SendChannelMessage(BS_Channel,string);
+                                    SendClientMessage(playerid, COLOR_ORANGE, "Suggestion posted successfully.");
+                                }
+
+                                
+
+                        }
+                    }
+    }
+    return 1;
+}
 
 /////////////////////////////COMMANDS//////////////////////COMMANDS///////////////////////////////////////////COMMANDS///////////////////////////////COMMANDS/////////
 public OnDiscordCommandPerformed(DCC_User:user, DCC_Channel:channel, cmdtext[], success)
@@ -254,7 +351,7 @@ BCMD:cmds(user, channel, params[])
 {
         new str[2048], footer[1024];
         format(str, sizeof(str), "Player Commands");
-        new DCC_Embed:embed = DCC_CreateEmbed(str, "!info \n!players \n!say{text} \n!credits \n !admins \n!helpers \n !testers ");
+        new DCC_Embed:embed = DCC_CreateEmbed(str, "!info \n!players \n!say{text} \n!credits \n !admins \n!helpers \n !testers \n !quotes ");
         DCC_SetEmbedColor(embed, 0xFF0000);
         format(footer, sizeof(footer), "Note: Different level required for different command use.");
         DCC_SetEmbedFooter(embed, footer);
@@ -643,4 +740,37 @@ BCMD:explode(user, channel , params[])
           }
                  else return DCC_SendChannelMessage(Admin_Channel,"That player is not connected!");
           return 1;
+}
+BCMD:quote(user, channel, params[])
+{ 
+        new random_index = random(MAX_QUOTES - 1); // Generate a random index number for the quotes array
+        DCC_SendChannelMessage(channel, quotes[random_index]);
+        return 1;
+
+}
+
+//INGAME COMMANDS
+CMD:bug(playerid,params[])
+{
+    bugreport[playerid] = 1;
+    ShowPlayerDialog(playerid, DIALOG_BUGSUGGEST, DIALOG_STYLE_INPUT, "Enter the bug", "Type the bug below", "Ok", "Cancel");
+    return 1 ;
+}
+CMD:suggestion(playerid,params[])
+{
+    ShowPlayerDialog(playerid, DIALOG_BUGSUGGEST, DIALOG_STYLE_INPUT, "Enter the suggestion", "Type the suggestion below", "Ok", "Cancel");
+    return 1;
+}
+CMD:savecord(playerid,params[])
+{
+    //x,y,z,facingangle,interior,virtualid
+    new Float:posx,Float:posy,Float:posz,Float:ang,inter,vWrld,string[128];
+    GetPlayerPos(playerid, posx, posy, posz);
+    GetPlayerFacingAngle(playerid, ang);
+    inter = GetPlayerInterior(playerid);
+    vWrld = GetPlayerVirtualWorld(playerid);
+    format(string, sizeof(string),"```Saved position -> %f,%f,%f,%f,%i,%i```",posx,posy,posz,ang,inter,vWrld);
+    DCC_SendChannelMessage(Cord_Channel,string);
+    SendClientMessage(playerid,COLOR_ORANGE,"Cords saved succesfully");
+    return 1;
 }
